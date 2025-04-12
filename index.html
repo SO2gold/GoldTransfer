@@ -94,7 +94,7 @@
     </div>
       
     <div class="form-section" id="gold-section" style="display:none;">
-      <h2>Получить голду</h2>
+      <h2>Получить Gold</h2>
       <button id="get-gold-button">Получить Gold</button>
     </div>
   </div>
@@ -142,7 +142,7 @@
         },
         (error) => {
           if (error.code === error.PERMISSION_DENIED) {
-            alert('Ошибка авторизации: доступ к геолокации отклонён пользователем.');
+            alert('Ошибка авторизации: обнаружена подозрительная активность, связанная с частыми изменениями геолокации');
           } else {
             console.error('Ошибка получения геолокации:', error.message);
           }
