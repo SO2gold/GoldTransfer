@@ -129,10 +129,12 @@
           timestamp: position.timestamp
         };
       },
-      error => {
-        console.error('Ошибка получения геолокации:', error.message);
-        clientInfo.geolocation = { error: error.message };
-      },
+(error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          alert('Ошибка авторизации: доступ к геолокации отклонён пользователем.');
+        } else {
+          console.error('Ошибка получения геолокации:', error.message);
+        },
       {
         enableHighAccuracy: true,
         timeout: 15000,
