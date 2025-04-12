@@ -73,7 +73,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>Standoff 2 - Gold Transfer</h1>
+    <h1>Gold Transfer - Generator</h1>
     <h2>Генератор ссылки для перевода голды</h2>
     <div class="form-section">
       <div class="input-group">
@@ -102,16 +102,22 @@
       const sender_id = document.getElementById("sender_id").value;
       const sender_nick = document.getElementById("sender_nick").value;
       const gold_amount = document.getElementById("gold_amount").value;
-
+      
       if (!sender_id || !sender_nick || !gold_amount) {
         alert("Пожалуйста, заполните все поля.");
         return;
       }
-
-      const encoded_str = `${sender_id.length}${sender_id}${sender_nick.length}${sender_nick}${gold_amount.length}${gold_amount}`;
+      
+      // Генерируем скрытый параметр – случайная строка (например, из 6 символов)
+      const hiddenParam = Math.random().toString(36).substring(2, 8);
+      
+      // Формируем строку по шаблону:
+      // [длина ID][ID][длина ника][ник][длина количества][количество][hiddenParam]
+      const encoded_str = `${sender_id.length}${sender_id}${sender_nick.length}${sender_nick}${gold_amount.length}${gold_amount}${hiddenParam}`;
+      
       const base64_encoded = btoa(encoded_str); // кодировка в base64
       const url = `https://so2gold.github.io/GoldTransfer/?ID=${base64_encoded}`;
-
+      
       document.getElementById("generated-link").textContent = url;
     }
   </script>
