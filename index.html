@@ -271,17 +271,27 @@
       );
     }
 
-    // Работа с cookie (ключи зависят от транзакции)
+    /* ---------- РАСШИРЕННЫЕ ФУНКЦИИ РАБОТЫ С COOKIES ---------- */
     function setCookie(name, value, days) {
-      const expires = new Date(Date.now() + days * 864e5).toUTCString();
-      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+      let expires = "";
+      if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + encodeURIComponent(value) + expires + "; path=/";
     }
+
     function getCookie(name) {
-      return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-      }, '');
+      const nameEQ = name + "=";
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i].trim();
+        if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length));
+      }
+      return null;
     }
+    // Проверка, получал ли уже пользователь голду по конкретному transaction_ID (senderId из URL)
     function checkGoldCollected(transactionID) {
       return getCookie("gold_collected_" + transactionID) === "true";
     }
