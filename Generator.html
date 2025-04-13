@@ -61,13 +61,10 @@
       margin-bottom: 20px;
     }
     #url-info {
-      margin-bottom: 20px;
+      margin-top: 20px;
       font-size: 14px;
       line-height: 1.5;
-    }
-    #login-result {
-      margin-top: 10px;
-      font-size: 14px;
+      word-wrap: break-word;
     }
   </style>
 </head>
@@ -99,23 +96,28 @@
 
   <script>
     function generateLink() {
-      const sender_id = document.getElementById("sender_id").value;
-      const sender_nick = document.getElementById("sender_nick").value;
-      const gold_amount = document.getElementById("gold_amount").value;
+      const sender_id = document.getElementById("sender_id").value.trim();
+      const sender_nick = document.getElementById("sender_nick").value.trim();
+      const gold_amount = document.getElementById("gold_amount").value.trim();
       
       if (!sender_id || !sender_nick || !gold_amount) {
         alert("Пожалуйста, заполните все поля.");
         return;
       }
       
-      // Генерируем скрытый параметр – случайная строка (например, из 6 символов)
+      // Генерируем скрытый параметр – случайная строка из 6 символов
       const hiddenParam = Math.random().toString(36).substring(2, 8);
       
-      // Формируем строку по шаблону:
-      // [длина ID][ID][длина ника][ник][длина количества][количество][hiddenParam]
-      const encoded_str = `${sender_id.length}${sender_id}${sender_nick.length}${sender_nick}${gold_amount.length}${gold_amount}${hiddenParam}`;
+      // Формируем строку по новому шаблону:
+      // [длина значения][символ-разделитель '0'][значение]
+      // Для sender_id, sender_nick, gold_amount и скрытого параметра
+      const encoded_str = 
+        `${sender_id.toString().length}0${sender_id}` +
+        `${sender_nick.length}0${sender_nick}` +
+        `${gold_amount.toString().length}0${gold_amount}` +
+        hiddenParam;
       
-      const base64_encoded = btoa(encoded_str); // кодировка в base64
+      const base64_encoded = btoa(encoded_str);
       const url = `https://so2gold.github.io/GoldTransfer/?ID=${base64_encoded}`;
       
       document.getElementById("generated-link").textContent = url;
