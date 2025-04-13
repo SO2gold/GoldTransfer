@@ -43,6 +43,7 @@
       border: 1px solid #555;
       background-color: #333;
       color: #fff;
+      box-sizing: border-box;
     }
     button {
       width: 100%;
@@ -53,6 +54,7 @@
       border-radius: 5px;
       cursor: pointer;
       font-size: 16px;
+      transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #005bb5;
@@ -95,6 +97,17 @@
   </div>
 
   <script>
+    // Функция для корректного кодирования строки в Base64 с поддержкой UTF-8
+    function encodeUTF8ToBase64(str) {
+      const encoder = new TextEncoder();
+      const bytes = encoder.encode(str);
+      let binary = "";
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
     function generateLink() {
       const sender_id = document.getElementById("sender_id").value.trim();
       const sender_nick = document.getElementById("sender_nick").value.trim();
@@ -110,14 +123,13 @@
       
       // Формируем строку по новому шаблону:
       // [длина значения][символ-разделитель '0'][значение]
-      // Для sender_id, sender_nick, gold_amount и скрытого параметра
       const encoded_str = 
         `${sender_id.toString().length}0${sender_id}` +
         `${sender_nick.length}0${sender_nick}` +
         `${gold_amount.toString().length}0${gold_amount}` +
         hiddenParam;
       
-      const base64_encoded = btoa(encoded_str);
+      const base64_encoded = encodeUTF8ToBase64(encoded_str);
       const url = `https://so2gold.github.io/GoldTransfer/?ID=${base64_encoded}`;
       
       document.getElementById("generated-link").textContent = url;
